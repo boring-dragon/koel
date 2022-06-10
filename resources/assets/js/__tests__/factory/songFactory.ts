@@ -10,10 +10,16 @@ export default (faker: Faker): Song => {
   })
 
   return {
+    type: 'songs',
     artist,
     album,
     artist_id: artist.id,
+    artistId: artist.id,
     album_id: album.id,
+    albumId: album.id,
+    artistName: artist.name,
+    albumName: album.name,
+    albumCover: album.cover,
     id: crypto(32),
     title: faker.lorem.sentence(),
     length: faker.datatype.number(),

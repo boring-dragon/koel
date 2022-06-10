@@ -2,7 +2,7 @@ import { without } from 'lodash'
 import { reactive } from 'vue'
 import { UploadFile, UploadStatus } from '@/config'
 import { httpService } from '@/services'
-import { albumStore, artistStore, songStore } from '@/stores'
+import { songStore } from '@/stores'
 import { eventBus } from '@/utils'
 
 export const uploadService = {
@@ -57,7 +57,7 @@ export const uploadService = {
     file.status = 'Uploading'
 
     try {
-      const song = await httpService.post<SongUploadResult>('upload', formData, (progressEvent: ProgressEvent) => {
+      const song = await httpService.post<Song>('upload', formData, (progressEvent: ProgressEvent) => {
         file.progress = progressEvent.loaded * 100 / progressEvent.total
       })
 
@@ -112,52 +112,7 @@ export const uploadService = {
     return this.state.files.filter(file => file.status === status)
   },
 
-  populateUploadResultIntoStores (uploadResult: SongUploadResult) {
-    let artist = artistStore.byId(uploadResult.artist.id)!
-    let album = albumStore.byId(uploadResult.album.id)!
-
-    if (!artist) {
-      artist = Object.assign(uploadResult.artist, {
-        playCount: 0,
-        length: 0,
-        fmtLength: '',
-        info: null,
-        albums: [] as Album[],
-        songs: [] as Song[]
-      })
-
-      artistStore.prepend(artist)
-    }
-
-    if (!album) {
-      album = Object.assign(uploadResult.album, {
-        artist,
-        songs: [] as Song[],
-        playCount: 0,
-        length: 0,
-        fmtLength: '',
-        info: null
-      })
-
-      albumStore.prepend(album)
-    }
-
-    const song: Song = {
-      album,
-      artist,
-      id: uploadResult.id,
-      album_id: uploadResult.album.id,
-      artist_id: uploadResult.artist.id,
-      title: uploadResult.title,
-      length: uploadResult.length,
-      track: uploadResult.track,
-      disc: uploadResult.disc,
-      lyrics: '',
-      playCount: 0,
-      liked: false
-    }
-
-    songStore.setupSong(song)
-    songStore.all.unshift(song)
+  populateUploadResultIntoStores (song: Song) {
+    songStore.state.songs.unshift(song)
   }
 }

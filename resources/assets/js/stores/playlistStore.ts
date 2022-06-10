@@ -5,7 +5,7 @@ import { arrayify } from '@/utils'
 import { songStore } from '.'
 import models from '@/config/smart-playlist/models'
 import operators from '@/config/smart-playlist/operators'
-import { reactive } from 'vue'
+import { reactive, Ref } from 'vue'
 
 export const playlistStore = {
   state: reactive({
@@ -51,12 +51,8 @@ export const playlistStore = {
     this.state.playlists = value
   },
 
-  async fetchSongs (playlist: Playlist) {
-    const songIds = await httpService.get<string[]>(`playlist/${playlist.id}/songs`)
-    playlist.songs = songStore.byIds(songIds)
-    playlist.populated = true
-
-    return playlist
+  async fetchSongs (playlist: Ref<Playlist>) {
+    return songStore.syncWithVault(await httpService.get<Song[]>(`playlists/${playlist.value.id}/songs`))
   },
 
   byId (id: number) {
@@ -106,23 +102,23 @@ export const playlistStore = {
     this.remove(playlist)
   },
 
-  async addSongs (playlist: Playlist, songs: Song[]) {
-    if (playlist.is_smart) {
+  async addSongs (playlist: Ref<Playlist>, songs: Song[]) {
+    if (playlist.value.is_smart) {
       return playlist
     }
 
-    if (!playlist.populated) {
+    if (!playlist.value.populated) {
       await this.fetchSongs(playlist)
     }
 
-    const count = playlist.songs.length
-    playlist.songs = union(playlist.songs, songs)
+    const count = playlist.value.songs.length
+    playlist.value.songs = union(playlist.value.songs, songs)
 
-    if (count === playlist.songs.length) {
+    if (count === playlist.value.songs.length) {
       return playlist
     }
 
-    await httpService.put(`playlist/${playlist.id}/sync`, { songs: playlist.songs.map(song => song.id) })
+    await httpService.put(`playlist/${playlist.value.id}/sync`, { songs: playlist.value.songs.map(song => song.id) })
 
     return playlist
   },

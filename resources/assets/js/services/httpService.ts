@@ -41,7 +41,10 @@ class Http {
 
   constructor () {
     this.client = Axios.create({
-      baseURL: `${window.BASE_URL}api`
+      baseURL: `${window.BASE_URL}api`,
+      headers: {
+        'X-Api-Version': 'v6'
+      }
     })
 
     // Intercept the request to make sure the token is injected into the header.

@@ -5,6 +5,12 @@ export default (faker: Faker): Album => {
   const artist = factory<Artist>('artist')
 
   return {
+    artistId: artist.id,
+    artistName: artist.name,
+    isCompilation: false,
+    songCount: 0,
+
+    type: 'albums',
     artist,
     id: faker.datatype.number(),
     artist_id: artist.id,

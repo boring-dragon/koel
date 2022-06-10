@@ -24,7 +24,7 @@
       v-if="songs.length"
       ref="songList"
       :items="songs"
-      :sortable="false"
+      :config="{ sortable: false }"
       type="recently-played"
       @press:enter="onPressEnter"
     />
@@ -65,8 +65,15 @@ const {
   toggleControls
 } = useSongList(toRef(recentlyPlayedStore.state, 'songs'))
 
+let initialized = false
+
 eventBus.on({
-  'LOAD_MAIN_CONTENT': (view: MainViewName) => view === 'RecentlyPlayed' && recentlyPlayedStore.fetchAll()
+  'LOAD_MAIN_CONTENT': async (view: MainViewName) => {
+    if (view === 'RecentlyPlayed' && !initialized) {
+      await recentlyPlayedStore.fetch()
+      initialized = true
+    }
+  }
 })
 </script>
 

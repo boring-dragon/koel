@@ -1,17 +1,8 @@
-import { cloneDeep } from 'lodash'
-import data from '@/__tests__/blobs/data'
 import { expect, it } from 'vitest'
 import UnitTestCase from '@/__tests__/UnitTestCase'
 import { albumStore, artistStore } from '@/stores'
 
 new class extends UnitTestCase {
-  protected beforeEach () {
-    super.beforeEach(() => {
-      artistStore.init(cloneDeep(data.artists))
-      albumStore.init(cloneDeep(data.albums))
-    })
-  }
-
   protected afterEach () {
     super.afterEach(() => {
       artistStore.state.artists = []
@@ -22,7 +13,7 @@ new class extends UnitTestCase {
   protected test () {
     it('gathers albums', () => expect(albumStore.state.albums).toHaveLength(7))
     it('sets album artists', () => expect(albumStore.state.albums[0].artist.id).toBe(3))
-    it('gets an album by ID', () => expect(albumStore.byId(1193).name).toBe('All-4-One'))
+    it('gets an album by ID', () => expect(albumStore.byId(1193)!.name).toBe('All-4-One'))
 
     it('compacts albums', () => {
       // because we've not processed songs, all albums here have no songs

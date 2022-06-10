@@ -151,7 +151,7 @@ new class extends UnitTestCase {
 
     it('registers play', () => {
       const recentlyPlayedStoreAddMock = this.mock(recentlyPlayedStore, 'add')
-      const recentlyPlayedStoreFetchAllMock = this.mock(recentlyPlayedStore, 'fetchAll')
+      const recentlyPlayedStoreFetchAllMock = this.mock(recentlyPlayedStore, 'fetch')
       const registerPlayMock = this.mock(songStore, 'registerPlay')
       const song = factory<Song>('song')
 

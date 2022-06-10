@@ -122,7 +122,6 @@ import { computed, defineAsyncComponent, nextTick, reactive, ref, toRef, toRefs 
 import { isEqual, union } from 'lodash'
 
 import { alerts, arrayify, br2nl, defaultCover, pluralize } from '@/utils'
-import { songInfoService } from '@/services/info'
 import { albumStore, artistStore, songStore } from '@/stores'
 
 interface EditFormData {
@@ -235,7 +234,6 @@ const open = async () => {
       loading.value = true
 
       try {
-        await songInfoService.fetch(firstSong)
         formData.lyrics = br2nl(firstSong.lyrics)
         formData.track = firstSong.track || null
       } catch (e) {

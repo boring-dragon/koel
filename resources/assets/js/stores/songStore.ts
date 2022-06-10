@@ -1,10 +1,10 @@
 import { reactive } from 'vue'
 import slugify from 'slugify'
-import { orderBy, remove, take, unionBy, without } from 'lodash'
 import isMobile from 'ismobilejs'
 import { arrayify, secondsToHis, use } from '@/utils'
 import { authService, httpService } from '@/services'
 import { albumStore, artistStore, commonStore, favoriteStore, preferenceStore } from '.'
+import deepmerge from 'deepmerge'
 
 interface BroadcastSongData {
   song: {
@@ -31,43 +31,11 @@ interface SongUpdateResult {
 }
 
 export const songStore = {
-  cache: {} as { [key: string]: Song },
+  vault: new Map<string, Song>(),
 
   state: reactive({
-    songs: [] as Song[],
-    recentlyPlayed: [] as Song[]
+    songs: [] as Song[]
   }),
-
-  init (songs: Song[]) {
-    this.all = songs
-    this.all.forEach(song => this.setupSong(song))
-  },
-
-  setupSong (song: Song) {
-    song.fmtLength = secondsToHis(song.length)
-
-    const album = albumStore.byId(song.album_id)!
-    const artist = artistStore.byId(song.artist_id)!
-
-    song.playCount = song.playCount || 0
-    song.album = album
-    song.artist = artist
-    song.liked = song.liked || false
-    song.lyrics = song.lyrics || ''
-    song.playbackState = song.playbackState || 'Stopped'
-
-    artist.songs = unionBy(artist.songs || [], [song], 'id')
-    album.songs = unionBy(album.songs || [], [song], 'id')
-
-    // now if the song is part of a compilation album, the album must be added
-    // into its artist as well
-    if (album.is_compilation) {
-      artist.albums = unionBy(artist.albums, [album], 'id')
-    }
-
-    // Cache the song, so that byId() is faster
-    this.cache[song.id] = song
-  },
 
   /**
    * Initializes the interaction (like/play count) information.
@@ -78,14 +46,14 @@ export const songStore = {
     favoriteStore.clear()
 
     interactions.forEach(interaction => {
-      const song = this.byId(interaction.song_id)
+      const song = this.byId(interaction.songId)
 
       if (!song) {
         return
       }
 
       song.liked = interaction.liked
-      song.playCount = interaction.play_count
+      song.playCount = interaction.playCount
       song.album.playCount += song.playCount
       song.artist.playCount += song.playCount
 
@@ -118,7 +86,7 @@ export const songStore = {
   },
 
   byId (id: string) {
-    return this.cache[id]
+    return this.vault.get(id)
   },
 
   byIds (ids: string[]) {
@@ -147,14 +115,10 @@ export const songStore = {
    * Increase a play count for a song.
    */
   registerPlay: async (song: Song) => {
-    const oldCount = song.playCount
-
     const interaction = await httpService.post<Interaction>('interaction/play', { song: song.id })
 
     // Use the data from the server to make sure we don't miss a play from another device.
-    song.playCount = interaction.play_count
-    song.album.playCount += song.playCount - oldCount
-    song.artist.playCount += song.playCount - oldCount
+    song.playCount = interaction.playCount
   },
 
   scrobble: async (song: Song) => await httpService.post(`${song.id}/scrobble`, { timestamp: song.playStartTime }),
@@ -172,25 +136,11 @@ export const songStore = {
     songs.forEach(song => {
       let originalSong = this.byId(song.id)!
 
-      if (originalSong.album_id !== song.album_id) {
-        // album has been changed. Remove the song from its old album.
-        originalSong.album.songs = without(originalSong.album.songs, originalSong)
-      }
-
-      if (originalSong.artist_id !== song.artist_id) {
-        // artist has been changed. Remove the song from its old artist
-        originalSong.artist.songs = without(originalSong.artist.songs, originalSong)
-      }
-
-      originalSong = Object.assign(originalSong, song)
-      // re-setup the song
-      this.setupSong(originalSong)
+      Object.assign(originalSong, song)
     })
 
     artistStore.compact()
     albumStore.compact()
-
-    return songs
   },
 
   getSourceUrl: (song: Song) => {
@@ -201,23 +151,6 @@ export const songStore = {
 
   getShareableUrl: (song: Song) => `${window.BASE_URL}#!/song/${song.id}`,
 
-  get recentlyPlayed () {
-    return this.state.recentlyPlayed
-  },
-
-  getMostPlayed (n = 10) {
-    const songs = take(orderBy(this.all, 'playCount', 'desc'), n)
-
-    // Remove those with playCount=0
-    remove(songs, song => !song.playCount)
-
-    return songs
-  },
-
-  getRecentlyAdded (n = 10) {
-    return take(orderBy(this.all, 'created_at', 'desc'), n)
-  },
-
   generateDataToBroadcast: (song: Song): BroadcastSongData => ({
     song: {
       id: song.id,
@@ -225,14 +158,53 @@ export const songStore = {
       liked: song.liked,
       playbackState: song.playbackState || 'Stopped',
       album: {
-        id: song.album.id,
-        name: song.album.name,
-        cover: song.album.cover
+        id: song.albumId,
+        name: song.albumName,
+        cover: song.albumCover
       },
       artist: {
-        id: song.artist.id,
-        name: song.artist.name
+        id: song.artistId,
+        name: song.artistName
       }
     }
-  })
+  }),
+
+  syncWithVault (songs: Song[]) {
+    return songs.map(song => {
+      let local = this.vault.get(song.id)
+
+      if (local) {
+        local = deepmerge(local, song)
+      } else {
+        song.playbackState = 'Stopped'
+        local = song
+      }
+
+      this.vault.set(song.id, local)
+
+      return local
+    })
+  },
+
+  async fetchForAlbum (album: Album) {
+    return this.syncWithVault(await httpService.get<Song[]>(`albums/${album.id}/songs`))
+  },
+
+  async fetchForArtist (artist: Artist) {
+    return this.syncWithVault(await httpService.get<Song[]>(`artists/${artist.id}/songs`))
+  },
+
+  async fetchForPlaylist (playlist: Playlist) {
+    return this.syncWithVault(await httpService.get<Song[]>(`playlists/${playlist.id}/songs`))
+  },
+
+  async fetch (sortField: SongListSortField, sortOrder: SortOrder, page: number) {
+    const resource = await httpService.get<SimplePaginatorResource>(
+      `songs?page=${page}&sort=${sortField}&order=${sortOrder}`
+    )
+
+    this.state.songs.push(...this.syncWithVault(resource.data))
+
+    return resource.links.next ? ++resource.meta.current_page : null
+  }
 }

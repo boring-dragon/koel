@@ -139,7 +139,7 @@ export const playbackService = {
   registerPlay (song: Song) {
     recentlyPlayedStore.add(song)
     songStore.registerPlay(song)
-    recentlyPlayedStore.fetchAll()
+    recentlyPlayedStore.fetch()
     song.playCountRegistered = true
   },
 
@@ -165,7 +165,7 @@ export const playbackService = {
     }
 
     document.title = `${song.title} ♫ Koel`
-    this.player!.media.setAttribute('title', `${song.artist.name} - ${song.title}`)
+    this.player!.media.setAttribute('title', `${song.artistName} - ${song.title}`)
 
     if (queueStore.current) {
       queueStore.current.playbackState = 'Stopped'
@@ -194,8 +194,8 @@ export const playbackService = {
 
     try {
       const notification = new window.Notification(`♫ ${song.title}`, {
-        icon: song.album.cover,
-        body: `${song.album.name} – ${song.artist.name}`
+        icon: song.albumCover,
+        body: `${song.albumName} – ${song.artistName}`
       })
 
       notification.onclick = () => window.focus()
@@ -209,11 +209,11 @@ export const playbackService = {
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
-      artist: song.artist.name,
-      album: song.album.name,
+      artist: song.artistName,
+      album: song.albumName,
       artwork: [
         {
-          src: song.album.cover,
+          src: song.albumCover,
           sizes: '256x256',
           type: 'image/png'
         }

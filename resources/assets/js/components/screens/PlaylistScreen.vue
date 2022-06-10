@@ -29,34 +29,33 @@
       </template>
     </ScreenHeader>
 
-    <template v-if="playlist?.populated">
-      <SongList
-        v-if="songs.length"
-        ref="songList"
-        :items="songs"
-        type="playlist"
-        @press:delete="removeSelected"
-        @press:enter="onPressEnter"
-      />
+    <SongList
+      v-if="songs.length"
+      ref="songList"
+      :items="songs"
+      type="playlist"
+      @press:delete="removeSelected"
+      @press:enter="onPressEnter"
+      @sort="sort"
+    />
 
-      <ScreenEmptyState v-else>
-        <template v-slot:icon>
-          <i class="fa fa-file-o"></i>
-        </template>
+    <ScreenEmptyState v-if="!songs.length && !loading">
+      <template v-slot:icon>
+        <i class="fa fa-file-o"></i>
+      </template>
 
-        <template v-if="playlist?.is_smart">
-          No songs match the playlist's
-          <a @click.prevent="editSmartPlaylist">criteria</a>.
-        </template>
-        <template v-else>
-          The playlist is currently empty.
-          <span class="d-block secondary">
-            Drag songs into its name in the sidebar
-            or use the &quot;Add To…&quot; button to fill it up.
-          </span>
-        </template>
-      </ScreenEmptyState>
-    </template>
+      <template v-if="playlist?.is_smart">
+        No songs match the playlist's
+        <a @click.prevent="editSmartPlaylist">criteria</a>.
+      </template>
+      <template v-else>
+        The playlist is currently empty.
+        <span class="d-block secondary">
+          Drag songs into its name in the sidebar
+          or use the &quot;Add To…&quot; button to fill it up.
+        </span>
+      </template>
+    </ScreenEmptyState>
   </section>
 </template>
 
@@ -64,7 +63,7 @@
 import { difference } from 'lodash'
 import { defineAsyncComponent, nextTick, ref, toRef } from 'vue'
 import { alerts, eventBus, pluralize } from '@/utils'
-import { playlistStore, commonStore } from '@/stores'
+import { commonStore, playlistStore, songStore } from '@/stores'
 import { downloadService } from '@/services'
 import { useSongList } from '@/composables'
 
@@ -72,6 +71,8 @@ const ScreenHeader = defineAsyncComponent(() => import('@/components/ui/ScreenHe
 const ScreenEmptyState = defineAsyncComponent(() => import('@/components/ui/ScreenEmptyState.vue'))
 
 const playlist = ref<Playlist>()
+const playlistSongs = ref<Song[]>([])
+const loading = ref(false)
 
 const {
   SongList,
@@ -88,7 +89,7 @@ const {
   playAll,
   playSelected,
   toggleControls
-} = useSongList(ref(playlist.value?.songs || []), { deletePlaylist: true })
+} = useSongList(playlistSongs, { deletePlaylist: true })
 
 const allowDownload = toRef(commonStore.state, 'allowDownload')
 
@@ -104,15 +105,16 @@ const removeSelected = () => {
   alerts.success(`Removed ${pluralize(selectedSongs.value.length, 'song')} from "${playlist.value!.name}."`)
 }
 
-/**
- * Fetch a playlist's content from the server, populate it, and use it afterwards.
- */
-const populate = async (_playlist: Playlist) => {
-  await playlistStore.fetchSongs(_playlist)
-  playlist.value = _playlist
-  songs.value = playlist.value.songs
+const sort = () => {
+  // @todo Implement playlist screen sort
+}
+
+const fetchSongs = async () => {
+  loading.value = true
+  playlistSongs.value = await songStore.fetchForPlaylist(playlist.value!)
+  loading.value = false
   await nextTick()
-  songList.value?.sort()
+  sort()
 }
 
 eventBus.on({
@@ -121,15 +123,12 @@ eventBus.on({
         return
       }
 
-      if (playlistFromRoute.populated) {
-        playlist.value = playlistFromRoute
-        songs.value = playlist.value.songs
-      } else {
-        populate(playlistFromRoute)
-      }
+      playlistSongs.value = []
+      playlist.value = playlistFromRoute
+      fetchSongs()
     },
 
-    'SMART_PLAYLIST_UPDATED': (updated: Playlist) => updated === playlist.value && populate(updated)
+    'SMART_PLAYLIST_UPDATED': (updated: Playlist) => updated === playlist.value && fetchSongs()
   }
 )
 </script>

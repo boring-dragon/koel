@@ -1,8 +1,9 @@
-import { difference, orderBy, take } from 'lodash'
+import { difference } from 'lodash'
 
 import { httpService } from '@/services'
 import { arrayify, use } from '@/utils'
 import { reactive } from 'vue'
+import deepmerge from 'deepmerge'
 
 interface ArtistStoreState {
   artists: Artist[]
@@ -12,29 +13,11 @@ const UNKNOWN_ARTIST_ID = 1
 const VARIOUS_ARTISTS_ID = 2
 
 export const artistStore = {
-  cache: {} as Record<number, Artist>,
+  vault: new Map<number, Artist>(),
 
   state: reactive<ArtistStoreState>({
     artists: []
   }),
-
-  init (artists: Artist[]) {
-    this.all = artists
-
-    // Traverse through artists array to get the cover and number of songs for each.
-    this.all.forEach(artist => this.setupArtist(artist))
-  },
-
-  setupArtist (artist: Artist) {
-    artist.info = artist.info || null
-    artist.albums = artist.albums || []
-    artist.songs = artist.songs || []
-    artist.playCount = artist.songs.reduce((count, song) => count + song.playCount, 0)
-
-    this.cache[artist.id] = artist
-
-    return artist
-  },
 
   get all () {
     return this.state.artists
@@ -44,8 +27,8 @@ export const artistStore = {
     this.state.artists = value
   },
 
-  byId (id: number): Artist | undefined {
-    return this.cache[id]
+  byId (id: number) {
+    return this.vault[id]
   },
 
   byIds (ids: number[]) {
@@ -55,11 +38,11 @@ export const artistStore = {
   },
 
   add (artists: Artist | Artist[]) {
-    arrayify(artists).forEach(artist => this.all.push(this.setupArtist(artist)))
+    arrayify(artists).forEach(artist => this.all.push(artist))
   },
 
   prepend (artists: Artist | Artist[]) {
-    arrayify(artists).forEach(artist => this.all.unshift(this.setupArtist(artist)))
+    arrayify(artists).forEach(artist => this.all.unshift(artist))
   },
 
   /**
@@ -73,23 +56,17 @@ export const artistStore = {
     }
 
     this.all = difference(this.all, emptyArtists)
-    emptyArtists.forEach(artist => delete this.cache[artist.id])
+    emptyArtists.forEach(artist => this.vault.delete(artist.id))
   },
 
-  isVariousArtists: (artist: Artist) => artist.id === VARIOUS_ARTISTS_ID,
+  isVariousArtists: (artist: Artist | number) => {
+    if (typeof artist === 'number') return artist === VARIOUS_ARTISTS_ID
+    return artist.id === VARIOUS_ARTISTS_ID
+  },
 
-  isUnknownArtist: (artist: Artist) => artist.id === UNKNOWN_ARTIST_ID,
-
-  getMostPlayed (count = 6): Artist[] {
-    // Only non-unknown artists with actual play count are applicable.
-    // Also, "Various Artists" doesn't count.
-    const applicable = this.all.filter(artist => {
-      return artist.playCount &&
-        !this.isUnknownArtist(artist) &&
-        !this.isVariousArtists(artist)
-    })
-
-    return take(orderBy(applicable, 'playCount', 'desc'), count)
+  isUnknownArtist: (artist: Artist | number) => {
+    if (typeof artist === 'number') return artist === UNKNOWN_ARTIST_ID
+    return artist.id === UNKNOWN_ARTIST_ID
   },
 
   /**
@@ -102,5 +79,33 @@ export const artistStore = {
     const { imageUrl } = await httpService.put<{ imageUrl: string }>(`artist/${artist.id}/image`, { image })
     artist.image = imageUrl
     return artist.image
+  },
+
+  syncWithVault (artists: Artist | Artist[]) {
+    return arrayify(artists).map(artist => {
+      let local = this.vault.get(artist.id)
+      local = local ? deepmerge(local, artist) : artist
+      this.vault.set(artist.id, local)
+
+      return local
+    })
+  },
+
+  async resolve (id: number) {
+    let artist = this.byId(id)
+
+    if (!artist) {
+      artist = await httpService.get<Artist>(`artists/${id}`)
+      this.syncWithVault(artist)
+    }
+
+    return artist
+  },
+
+  async fetch (page: number) {
+    const resource = await httpService.get<SimplePaginatorResource>(`artists?page=${page}`)
+    this.state.artists.push(...this.syncWithVault(resource.data))
+
+    return resource.links.next ? ++resource.meta.current_page : null
   }
 }

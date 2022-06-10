@@ -7,9 +7,9 @@
   >
     <span v-if="columns.includes('track')" class="track-number text-secondary">{{ song.track || '' }}</span>
     <span v-if="columns.includes('title')" class="title">{{ song.title }}</span>
-    <span v-if="columns.includes('artist')" class="artist">{{ song.artist.name }}</span>
-    <span v-if="columns.includes('album')" class="album">{{ song.album.name }}</span>
-    <span v-if="columns.includes('length')" class="time text-secondary">{{ song.fmtLength }}</span>
+    <span v-if="columns.includes('artist')" class="artist">{{ song.artistName }}</span>
+    <span v-if="columns.includes('album')" class="album">{{ song.albumName }}</span>
+    <span v-if="columns.includes('length')" class="time text-secondary">{{ fmtLength }}</span>
     <span class="favorite">
       <LikeButton :song="song"/>
     </span>
@@ -24,6 +24,7 @@
 import { computed, defineAsyncComponent, toRefs } from 'vue'
 import { playbackService } from '@/services'
 import { queueStore } from '@/stores'
+import { secondsToHis } from '@/utils'
 
 const LikeButton = defineAsyncComponent(() => import('@/components/song/SongLikeButton.vue'))
 
@@ -32,6 +33,7 @@ const { item, columns } = toRefs(props)
 
 const song = computed(() => item.value.song)
 const playing = computed(() => ['Playing', 'Paused'].includes(song.value.playbackState!))
+const fmtLength = secondsToHis(song.value.length)
 
 const play = () => {
   queueStore.queueIfNotQueued(song.value)

@@ -12,7 +12,7 @@
     @contextmenu.prevent="requestContextMenu"
   >
     <span class="thumbnail-wrapper">
-      <ArtistThumbnail :entity="artist" />
+      <ArtistThumbnail :entity="artist"/>
     </span>
 
     <footer>
@@ -21,9 +21,9 @@
       </div>
       <p class="meta">
         <span class="left">
-          {{ pluralize(artist.albums.length, 'album') }}
+          {{ pluralize(artist.albumCount, 'album') }}
           •
-          {{ pluralize(artist.songs.length, 'song') }}
+          {{ pluralize(artist.songCount, 'song') }}
           •
           {{ duration }}
           •
@@ -38,7 +38,7 @@
             data-testid="shuffle-artist"
             @click.prevent="shuffle"
           >
-            <i class="fa fa-random" />
+            <i class="fa fa-random"/>
           </a>
           <a
             v-if="allowDownload"
@@ -49,7 +49,7 @@
             data-testid="download-artist"
             @click.prevent="download"
           >
-            <i class="fa fa-download" />
+            <i class="fa fa-download"/>
           </a>
         </span>
       </p>
@@ -59,8 +59,8 @@
 
 <script lang="ts" setup>
 import { computed, defineAsyncComponent, toRef, toRefs } from 'vue'
-import { eventBus, pluralize, startDragging } from '@/utils'
-import { artistStore, commonStore, songStore } from '@/stores'
+import { eventBus, pluralize, secondsToHis, startDragging } from '@/utils'
+import { artistStore, commonStore } from '@/stores'
 import { downloadService, playbackService } from '@/services'
 
 const ArtistThumbnail = defineAsyncComponent(() => import('@/components/ui/AlbumArtistThumbnail.vue'))
@@ -70,8 +70,8 @@ const { artist, layout } = toRefs(props)
 
 const allowDownload = toRef(commonStore.state, 'allowDownload')
 
-const duration = computed(() => songStore.getFormattedLength(artist.value.songs))
-const showing = computed(() => artist.value.songs.length && !artistStore.isVariousArtists(artist.value))
+const duration = computed(() => secondsToHis(artist.value.length))
+const showing = computed(() => artist.value.songCount && !artistStore.isVariousArtists(artist.value))
 
 const shuffle = () => playbackService.playAllByArtist(artist.value, true /* shuffled */)
 const download = () => downloadService.fromArtist(artist.value)

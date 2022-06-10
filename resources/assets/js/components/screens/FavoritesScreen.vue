@@ -31,15 +31,16 @@
     </ScreenHeader>
 
     <SongList
-      v-if="songs.length"
+      v-show="songs.length"
       ref="songList"
       :items="songs"
       type="favorites"
       @press:delete="removeSelected"
       @press:enter="onPressEnter"
+      @sort="sort"
     />
 
-    <ScreenEmptyState v-else>
+    <ScreenEmptyState v-show="!songs.length">
       <template v-slot:icon>
         <i class="fa fa-frown-o"></i>
       </template>
@@ -54,8 +55,8 @@
 </template>
 
 <script lang="ts" setup>
-import { pluralize } from '@/utils'
-import { favoriteStore, commonStore } from '@/stores'
+import { eventBus, pluralize } from '@/utils'
+import { commonStore, favoriteStore } from '@/stores'
 import { downloadService } from '@/services'
 import { useSongList } from '@/composables'
 import { defineAsyncComponent, toRef } from 'vue'
@@ -84,4 +85,24 @@ const allowDownload = toRef(commonStore.state, 'allowDownload')
 
 const download = () => downloadService.fromFavorites()
 const removeSelected = () => selectedSongs.value.length && favoriteStore.unlike(selectedSongs.value)
+
+let initialized = false
+let sortField: SongListSortField = 'songs.title' // @todo get from query string
+let sortOrder: SortOrder = 'asc'
+
+const sort = async (field: SongListSortField, order: SortOrder) => {
+  sortField = field
+  sortOrder = order
+
+  console.warn('KOEL: Implement client Favorites sort') // @todo
+}
+
+const fetchSongs = async () => await favoriteStore.fetch()
+
+eventBus.on('LOAD_MAIN_CONTENT', async (view: MainViewName) => {
+  if (view === 'Favorites' && !initialized) {
+    await fetchSongs()
+    initialized = true
+  }
+})
 </script>

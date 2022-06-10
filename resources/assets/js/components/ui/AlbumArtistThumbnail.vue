@@ -36,7 +36,7 @@ const { entity } = toRefs(props)
 const droppable = ref(false)
 const user = toRef(userStore.state, 'current')
 
-const forAlbum = computed(() => 'artist' in entity.value)
+const forAlbum = computed(() => entity.value.type === 'albums')
 const sortFields = computed(() => forAlbum.value ? ['disc', 'track'] : ['album_id', 'disc', 'track'])
 
 const image = computed(() => {
@@ -48,16 +48,6 @@ const image = computed(() => {
 })
 
 const getArtistImage = (artist: Artist) => {
-  // If the artist has no image, try getting the cover from one of their albums
-  if (!artist.image) {
-    artist.albums.every(album => {
-      if (album.cover !== defaultCover) {
-        artist.image = album.cover
-        return false
-      }
-    })
-  }
-
   artist.image = artist.image ?? defaultCover
 
   return artist.image

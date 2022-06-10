@@ -8,7 +8,7 @@
     @contextmenu.prevent="requestContextMenu"
     @dblclick.prevent="play"
   >
-    <span :style="{ backgroundImage: `url(${song.album.cover})` }" class="cover">
+    <span :style="{ backgroundImage: `url(${song.albumCover})` }" class="cover">
       <a class="control" @click.prevent="changeSongState" data-testid="play-control">
         <i v-if="song.playbackState !== 'Playing'" class="fa fa-play"/>
         <i class="fa fa-pause" v-else/>
@@ -19,7 +19,7 @@
         <span v-if="showPlayCount" :style="{ width: `${song.playCount*100/topPlayCount}%` }" class="play-count"/>
         {{ song.title }}
         <span class="by text-secondary">
-          <a :href="`#!/artist/${song.artist.id}`">{{ song.artist.name }}</a>
+          <a :href="`#!/artist/${song.artistId}`">{{ song.artistName }}</a>
           <template v-if="showPlayCount"> - {{ pluralize(song.playCount, 'play') }}</template>
         </span>
       </span>

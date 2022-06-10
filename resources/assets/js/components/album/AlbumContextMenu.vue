@@ -29,7 +29,7 @@ const allowDownload = toRef(commonStore.state, 'allowDownload')
 const isStandardAlbum = computed(() => !albumStore.isUnknownAlbum(album.value))
 
 const isStandardArtist = computed(() => {
-  return !artistStore.isUnknownArtist(album.value.artist) && !artistStore.isVariousArtists(album.value.artist)
+  return !artistStore.isUnknownArtist(album.value.artistId) && !artistStore.isVariousArtists(album.value.artistId)
 })
 
 const play = () => playbackService.playAllInAlbum(album.value)

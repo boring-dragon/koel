@@ -141,6 +141,7 @@ interface ArtistInfo {
 }
 
 interface Artist {
+  type: 'artists',
   readonly id: number
   name: string
   image: string | null
@@ -148,30 +149,43 @@ interface Artist {
   songs: Song[]
   info: ArtistInfo | null
   playCount: number
+  albumCount: number
+  songCount: number
   length: number
   fmtLength: string
 }
 
 interface Album {
-  is_compilation: any
+  type: 'albums'
   readonly id: number
-  artist_id: number
+  artist_id: number // @fixme
+  artistId: number
+  artistName: string
   artist: Artist
   name: string
   cover: string
   thumbnail?: string | null
-  songs: Song[]
+  songs: Song[] // @fixme remove
   info: AlbumInfo | null
   playCount: number
+  songCount: number
   length: number
   fmtLength: string
+  is_compilation: any
+  isCompilation: boolean
 }
 
 interface Song {
+  type: 'songs'
   readonly id: string
-  album_id: number
+  album_id: number //@fixme
+  albumId: number
+  albumName: string
+  albumCover: string
   album: Album
-  artist_id: number
+  artist_id: number // @fixme
+  artistId: number
+  artistName: string
   artist: Artist
   title: string
   readonly length: number
@@ -267,9 +281,9 @@ interface Settings {
 }
 
 interface Interaction {
-  readonly song_id: string
+  readonly songId: string
   liked: boolean
-  play_count: number
+  playCount: number
 }
 
 declare module 'koel/types/ui' {
@@ -327,18 +341,8 @@ declare type MainViewName =
 declare type ArtistAlbumCardLayout = 'full' | 'compact'
 
 interface SongUploadResult {
-  album: {
-    id: number
-    name: string
-    cover: string
-    is_compilation: boolean
-    artist_id: number
-  }
-  artist: {
-    id: number
-    name: string
-    image: string | null
-  }
+  album: Album
+  artist: Artist
   id: string
   title: string
   length: number
@@ -388,11 +392,30 @@ interface SongListConfig {
   columns: SongListColumn[]
 }
 
-type SongListSortField = 'song.track'
-  | 'song.disc'
-  | 'song.title'
-  | 'song.album.artist.name'
-  | 'song.album.name'
-  | 'song.length'
+type SongListSortField = 'songs.track'
+  | 'songs.disc'
+  | 'songs.title'
+  | 'artists.name'
+  | 'albums.name'
+  | 'songs.length'
+
+type SortOrder = 'asc' | 'desc'
 
 type MethodOf<T> = { [K in keyof T]: T[K] extends Closure ? K : never; }[keyof T]
+
+interface PaginatorResource {
+  data: any[]
+  meta: {
+    next_cursor: string
+  }
+}
+
+interface SimplePaginatorResource {
+  data: any[]
+  links: {
+    next: string | null
+  }
+  meta: {
+    current_page: number
+  }
+}

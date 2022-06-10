@@ -1,8 +1,6 @@
-import { albumInfoService, artistInfoService, httpService } from '@/services'
+import { httpService } from '@/services'
 
 interface SongInfoResponse {
-  artist_info: ArtistInfo,
-  album_info: AlbumInfo,
   youtube: {
     items: YouTubeVideo[],
     nextPageToken: string
@@ -15,14 +13,10 @@ export const songInfoService = {
     if (!song.infoRetrieved) {
       const {
         lyrics,
-        artist_info: artistInfo,
-        album_info: albumInfo,
         youtube
       } = await httpService.get<SongInfoResponse>(`song/${song.id}/info`)
 
       song.lyrics = lyrics
-      artistInfo && artistInfoService.merge(song.artist, artistInfo)
-      albumInfo && albumInfoService.merge(song.album, albumInfo)
       song.youtube = youtube
       song.infoRetrieved = true
     }

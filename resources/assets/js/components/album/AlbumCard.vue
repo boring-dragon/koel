@@ -1,8 +1,8 @@
 <template>
   <article
-    v-if="album.songs.length"
+    v-if="album.songCount"
     :class="layout"
-    :title="`${album.name} by ${album.artist.name}`"
+    :title="`${album.name} by ${album.artistName}`"
     class="item"
     data-testid="album-card"
     draggable="true"
@@ -19,12 +19,12 @@
       <div class="info">
         <a :href="`#!/album/${album.id}`" class="name" data-testid="name">{{ album.name }}</a>
         <span class="sep text-secondary"> by </span>
-        <a v-if="isNormalArtist" :href="`#!/artist/${album.artist.id}`" class="artist">{{ album.artist.name }}</a>
-        <span v-else class="artist nope">{{ album.artist.name }}</span>
+        <a v-if="isNormalArtist" :href="`#!/artist/${album.artistId}`" class="artist">{{ album.artistName }}</a>
+        <span v-else class="artist nope">{{ album.artistName }}</span>
       </div>
       <p class="meta">
         <span class="left">
-          {{ pluralize(album.songs.length, 'song') }}
+          {{ pluralize(album.songCount, 'song') }}
           •
           {{ duration }}
           •
@@ -60,8 +60,8 @@
 
 <script lang="ts" setup>
 import { computed, defineAsyncComponent, toRef, toRefs } from 'vue'
-import { eventBus, pluralize, startDragging } from '@/utils'
-import { artistStore, commonStore, songStore } from '@/stores'
+import { eventBus, pluralize, secondsToHis, startDragging } from '@/utils'
+import { artistStore, commonStore } from '@/stores'
 import { downloadService, playbackService } from '@/services'
 
 const AlbumThumbnail = defineAsyncComponent(() => import('@/components/ui/AlbumArtistThumbnail.vue'))
@@ -71,10 +71,10 @@ const { album, layout } = toRefs(props)
 
 const allowDownload = toRef(commonStore.state, 'allowDownload')
 
-const duration = computed(() => songStore.getFormattedLength(album.value.songs))
+const duration = computed(() => secondsToHis(album.value.length))
 
 const isNormalArtist = computed(() => {
-  return !artistStore.isVariousArtists(album.value.artist) && !artistStore.isUnknownArtist(album.value.artist)
+  return !artistStore.isVariousArtists(album.value.artistId) && !artistStore.isUnknownArtist(album.value.artistId)
 })
 
 const shuffle = () => playbackService.playAllInAlbum(album.value, true /* shuffled */)

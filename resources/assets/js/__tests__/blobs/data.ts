@@ -57,7 +57,7 @@ const theTimes = factory<Album>('album', {
   artist: bobDylan,
   id: 1219,
   artist_id: 4,
-  name: "The Times They Are A-Changin",
+  name: 'The Times They Are A-Changin',
   cover: '/img/covers/unknown-album.png'
 })
 
@@ -126,7 +126,7 @@ export default {
       id: 'aa16bbef6a9710eb9a0f41ecc534fad5',
       album_id: patGarrett.id,
       artist_id: bobDylan.id,
-      title: "Knockin' on heaven's door",
+      title: 'Knockin\' on heaven\'s door',
       length: 151.9
     }),
     factory<Song>('song', {
@@ -135,7 +135,7 @@ export default {
       id: 'cb7edeac1f097143e65b1b2cde102482',
       album_id: theTimes.id,
       artist_id: bobDylan.id,
-      title: "The times they are a-changin'",
+      title: 'The times they are a-changin\'',
       length: 196
     }),
     factory<Song>('song', {
@@ -189,7 +189,7 @@ export default {
       id: '7900ab518f51775fe6cf06092c074ee5',
       album_id: backToBedlam.id,
       artist_id: jamesBlunt.id,
-      title: "You're beautiful",
+      title: 'You\'re beautiful',
       length: 213.29
     }),
     factory<Song>('song', {
@@ -214,33 +214,33 @@ export default {
   interactions: [
     {
       id: 1,
-      song_id: '7900ab518f51775fe6cf06092c074ee5',
+      songId: '7900ab518f51775fe6cf06092c074ee5',
       liked: false,
-      play_count: 1
+      playCount: 1
     },
     {
       id: 2,
-      song_id: '95c0ffc33c08c8c14ea5de0a44d5df3c',
+      songId: '95c0ffc33c08c8c14ea5de0a44d5df3c',
       liked: false,
-      play_count: 2
+      playCount: 2
     },
     {
       id: 3,
-      song_id: 'c83b201502eb36f1084f207761fa195c',
+      songId: 'c83b201502eb36f1084f207761fa195c',
       liked: false,
-      play_count: 1
+      playCount: 1
     },
     {
       id: 4,
-      song_id: 'cb7edeac1f097143e65b1b2cde102482',
+      songId: 'cb7edeac1f097143e65b1b2cde102482',
       liked: true,
-      play_count: 3
+      playCount: 3
     },
     {
       id: 5,
-      song_id: 'ccc38cc14bb95aefdf6da4b34adcf548',
+      songId: 'ccc38cc14bb95aefdf6da4b34adcf548',
       liked: false,
-      play_count: 4
+      playCount: 4
     }
   ],
   currentUser,

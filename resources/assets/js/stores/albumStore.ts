@@ -1,9 +1,8 @@
-import { difference, orderBy, take, union } from 'lodash'
-
-import { artistStore } from '.'
+import { difference } from 'lodash'
 import { httpService } from '@/services'
 import { arrayify, use } from '@/utils'
 import { reactive } from 'vue'
+import deepmerge from 'deepmerge'
 
 interface AlbumStoreState {
   albums: Album[]
@@ -12,32 +11,11 @@ interface AlbumStoreState {
 const UNKNOWN_ALBUM_ID = 1
 
 export const albumStore = {
-  cache: {} as Record<number, Album>,
+  vault: new Map<number, Album>(),
 
   state: reactive<AlbumStoreState>({
     albums: []
   }),
-
-  init (albums: Album[]) {
-    this.all = albums
-
-    // Traverse through the artists array and add their albums into our master album list.
-    this.all.forEach(album => this.setupAlbum(album))
-  },
-
-  setupAlbum (album: Album) {
-    const artist = artistStore.byId(album.artist_id)!
-    artist.albums = union(artist.albums, [album])
-
-    album.artist = artist
-    album.info = album.info || null
-    album.songs = album.songs || []
-    album.playCount = album.songs.reduce((count, song) => count + song.playCount, 0)
-
-    this.cache[album.id] = album
-
-    return album
-  },
 
   get all () {
     return this.state.albums
@@ -48,7 +26,7 @@ export const albumStore = {
   },
 
   byId (id: number) {
-    return this.cache[id]
+    return this.vault.get(id)
   },
 
   byIds (ids: number[]) {
@@ -58,11 +36,11 @@ export const albumStore = {
   },
 
   add (albums: Album | Album[]) {
-    arrayify(albums).forEach(album => this.all.push(this.setupAlbum(album)))
+    arrayify(albums).forEach(album => this.all.push(album))
   },
 
   prepend (albums: Album | Album[]) {
-    arrayify(albums).forEach(album => this.all.unshift(this.setupAlbum(album)))
+    arrayify(albums).forEach(album => this.all.unshift(album))
   },
 
   /**
@@ -75,18 +53,7 @@ export const albumStore = {
     }
 
     this.all = difference(this.all, emptyAlbums)
-    emptyAlbums.forEach(album => delete this.cache[album.id])
-  },
-
-  getMostPlayed (count = 6): Album[] {
-    // Only non-unknown albums with actual play count are applicable.
-    const applicable = this.all.filter(album => album.playCount && !this.isUnknownAlbum(album))
-    return take(orderBy(applicable, 'playCount', 'desc'), count)
-  },
-
-  getRecentlyAdded (count = 6): Album[] {
-    const applicable = this.all.filter(album => !this.isUnknownAlbum(album))
-    return take(orderBy(applicable, 'created_at', 'desc'), count)
+    emptyAlbums.forEach(album => this.vault.delete(album.id))
   },
 
   /**
@@ -111,5 +78,36 @@ export const albumStore = {
     return album.thumbnail
   },
 
-  isUnknownAlbum: (album: Album) => album.id === UNKNOWN_ALBUM_ID
+  isUnknownAlbum: (album: Album | number) => {
+    if (typeof album === 'number') return album === UNKNOWN_ALBUM_ID
+    return album.id === UNKNOWN_ALBUM_ID
+  },
+
+  syncWithVault (albums: Album | Album[]) {
+    return arrayify(albums).map(album => {
+      let local = this.vault.get(album.id)
+      local = local ? deepmerge(local, album) : album
+      this.vault.set(album.id, local)
+
+      return local
+    })
+  },
+
+  async resolve (id: number) {
+    let album = this.vault.get(id)
+
+    if (!album) {
+      album = await httpService.get<Album>(`albums/${id}`)
+      this.syncWithVault(album)
+    }
+
+    return album
+  },
+
+  async fetch (page: number) {
+    const resource = await httpService.get<SimplePaginatorResource>(`albums?page=${page}`)
+    this.state.albums.push(...this.syncWithVault(resource.data))
+
+    return resource.links.next ? ++resource.meta.current_page : null
+  }
 }

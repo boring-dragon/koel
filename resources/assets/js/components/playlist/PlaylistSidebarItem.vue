@@ -101,7 +101,7 @@ const handleDrop = (event: DragEvent) => {
   if (type.value === 'favorites') {
     favoriteStore.like(songs)
   } else if (type.value === 'playlist') {
-    playlistStore.addSongs(playlist.value, songs)
+    playlistStore.addSongs(playlist, songs)
     alerts.success(`Added ${pluralize(songs.length, 'song')} into "${playlist.value.name}."`)
   }
 

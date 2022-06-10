@@ -2,34 +2,24 @@ import isMobile from 'ismobilejs'
 import { reactive } from 'vue'
 
 import { httpService } from '@/services'
-import {
-  albumStore,
-  artistStore,
-  playlistStore,
-  preferenceStore,
-  queueStore,
-  recentlyPlayedStore,
-  settingStore,
-  songStore,
-  themeStore,
-  userStore
-} from '.'
+import { playlistStore, preferenceStore, queueStore, settingStore, themeStore, userStore } from '.'
 
 interface CommonStoreState {
-  albums: Album[]
+  overview: {
+    mostPlayedSongs: Song[],
+    recentlyPlayedSongs: Song[],
+    recentlyAddedSongs: Song[],
+    recentlyAddedAlbums: Album[],
+    topAlbums: Album[],
+    topArtists: Artist[]
+  },
   allowDownload: boolean
-  artists: Artist[]
   cdnUrl: string
   currentUser: User | undefined
   currentVersion: string
-  favorites: Song[]
-  interactions: Interaction[]
   latestVersion: string
   playlists: Playlist[]
-  queued: Song[]
-  recentlyPlayed: string[]
   settings: Settings
-  songs: Song[]
   useiTunes: boolean
   useLastfm: boolean
   users: User[]
@@ -38,20 +28,21 @@ interface CommonStoreState {
 
 export const commonStore = {
   state: reactive<CommonStoreState>({
-    albums: [],
+    overview: {
+      mostPlayedSongs: [],
+      recentlyPlayedSongs: [],
+      recentlyAddedAlbums: [],
+      recentlyAddedSongs: [],
+      topAlbums: [],
+      topArtists: []
+    },
     allowDownload: false,
-    artists: [],
     cdnUrl: '',
     currentUser: undefined,
     currentVersion: '',
-    favorites: [],
-    interactions: [],
     latestVersion: '',
     playlists: [],
-    queued: [],
-    recentlyPlayed: [],
     settings: {} as Settings,
-    songs: [],
     useiTunes: false,
     useLastfm: false,
     users: [],
@@ -69,11 +60,6 @@ export const commonStore = {
 
     userStore.init(this.state.users, this.state.currentUser!)
     preferenceStore.init(this.state.currentUser)
-    artistStore.init(this.state.artists)
-    albumStore.init(this.state.albums)
-    songStore.init(this.state.songs)
-    songStore.initInteractions(this.state.interactions)
-    recentlyPlayedStore.initExcerpt(this.state.recentlyPlayed)
     playlistStore.init(this.state.playlists)
     queueStore.init()
     settingStore.init(this.state.settings)

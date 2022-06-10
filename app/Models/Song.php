@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Laravel\Scout\Searchable;
 
@@ -223,6 +224,25 @@ class Song extends Model
         // it just _appends_ a "<br />" after each of them. This would cause our client
         // implementation of br2nl to fail with duplicated line breaks.
         return str_replace(["\r\n", "\r", "\n"], '<br />', $value);
+    }
+
+    public static function withMeta(User $scopedUser): Builder
+    {
+        return static::query()
+            ->with('artist', 'album')
+            ->leftJoin('interactions', static function (JoinClause $join) use ($scopedUser): void {
+                $join->on('interactions.song_id', '=', 'songs.id')
+                    ->where('interactions.user_id', $scopedUser->id);
+            })
+            ->join('albums', 'songs.album_id', '=', 'albums.id')
+            ->join('artists', 'songs.artist_id', '=', 'artists.id')
+            ->select(
+                'songs.*',
+                'albums.name',
+                'artists.name',
+                'interactions.liked',
+                'interactions.play_count'
+            );
     }
 
     /** @return array<mixed> */
